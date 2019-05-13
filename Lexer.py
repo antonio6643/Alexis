@@ -1,7 +1,4 @@
 from datetime import datetime
-import Stick
-
-DebugName = str(datetime.now().strftime("%Y-%m-%d  %H.%M.%S"))
 
 class Token:
 	def __init__(self, lineNumber: int, columnNumber: int, truePosition: int, data: str):
@@ -47,7 +44,7 @@ class Buffer: # TODO: Process the token data since a string would have the data 
 		return self.seekingToken(self.line, self.column, self.position, self.stream)
 
 class Lexer:
-	def __init__(self, data: str, tRegistry: TokenRegistry, BurnSticks=False):
+	def __init__(self, data: str, tRegistry: TokenRegistry):
 		self.position = -1
 		self._data = data
 		self.tokens = []
@@ -56,25 +53,20 @@ class Lexer:
 		self.Finished = False
 		self.line = 1
 		self.column = 0
-		self.stick = Stick.LogFile(DebugName, BurnSticks)
 
 	def Step(self):
 		if self.Finished == False:
 			self.position += 1
 			self.column += 1
 			current = self._data[self.position]
-			prefix = "(L:{0}, C:{1}, P:{2}) : ".format(self.line, self.column, self.position)
 			if self.Buffer: # Try to add to buffer
 				Scouted = self.Buffer.scout(current)
 				if Scouted == False: # Pack up and move out
-					self.stick.Write(Stick.LOGLABEL.LOG, prefix+"Closing Buffer("+self.Buffer.seekingToken.__class__.__name__+")")
 					KnuToken = self.Buffer.packageToken()
-					self.stick.Write(Stick.LOGLABEL.LOG, prefix+"Adding Token"+str(KnuToken))
 					self.tokens.append(KnuToken)
 					nextBuffer = self.registry.classifyCharacter(current)
 					if nextBuffer:
 						self.Buffer = Buffer(nextBuffer, self.line, self.column, self.position)
-						self.stick.Write(Stick.LOGLABEL.LOG, prefix+"Opening Buffer("+nextBuffer.__class__.__name__+")")
 						self.Buffer.scout(current)
 					else:
 						self.Buffer = None
@@ -86,15 +78,12 @@ class Lexer:
 				else:
 					bestGuess = self.registry.classifyCharacter(current)
 					if bestGuess:
-						self.stick.Write(Stick.LOGLABEL.LOG, prefix+"Opening Buffer("+bestGuess.__class__.__name__+")")
 						self.Buffer = Buffer(bestGuess, self.line, self.column, self.position)
 						self.Buffer.scout(current)
 			if self.position >= len(self._data) - 1:
 				self.Finished = True
 				if self.Buffer:
-					self.stick.Write(Stick.LOGLABEL.LOG, prefix+"Closing Buffer("+self.Buffer.seekingToken.__class__.__name__+")")
 					KnuToken = self.Buffer.packageToken()
-					self.stick.Write(Stick.LOGLABEL.LOG, prefix+"Adding Token"+str(KnuToken))
 					self.tokens.append(KnuToken)
 					self.Buffer = None
 
@@ -105,6 +94,6 @@ class Lexer:
 
 if __name__ == "__main__":
 	import SampleTokens
-	alexis = Lexer("100+100=200", SampleTokens.ArithmeticRegistry)
+	alexis = Lexer("100+100", SampleTokens.ArithmeticRegistry)
 	alexis.FullParse()
 	print(alexis.tokens)
